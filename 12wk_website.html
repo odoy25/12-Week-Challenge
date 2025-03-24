@@ -1,0 +1,39 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel='stylesheet' href="robot.css">
+    <title>Control Panel</title>
+  </head>
+  <body>
+    <header>
+      <h1>iRobot Control Panel</h1>
+    </header>
+
+    <div>
+      <input id="nameInput" type="text" placeholder="Enter robot name">
+      <button id="connectButton">Connect</button>
+    </div>
+
+    <h2 id="statusText">Disconnected</h2>
+
+    <div id="controlButtons">
+      <button id="LeftButton">⬅️</button>
+      <button id="UpButton">⬆️</button>
+      <button id="RightButton">➡️</button>
+    </div>
+
+    <div>
+      <p>X: <strong id="xPos">0.00</strong></p>
+      <p>Y: <strong id="yPos">0.00</strong></p>
+      <p>Z: <strong id="zPos">0.00</strong></p>
+    </div> 
+
+    <div>
+        <canvas id="sensorCanvas" width="300" height="300" style="border: 1px solid black;"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.js"></script>
+    <script src="robot.js"></script>
+  </body>
+</html>
