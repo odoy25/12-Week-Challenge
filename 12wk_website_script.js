@@ -261,13 +261,13 @@ rgtBtn.addEventListener('mouseup', function() {
   cmdVel.publish(twist);
 });
 
-// Event listener for the "Auto" button
-autoButton.addEventListener('click', () => {
+// Event listener for the "Race!" button
+startButton.addEventListener('click', () => {
   startTimer();  
 });
 
-// Event listener for the "Manual" button
-manualButton.addEventListener('click', () => {
+// Event listener for the "Finish" button
+stopButton.addEventListener('click', () => {
   stopTimer();
 });
 
