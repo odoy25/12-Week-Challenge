@@ -16,12 +16,34 @@ zPos = document.getElementById('zPos');
 const sensorCanvas = document.getElementById('sensorCanvas');
 const ctx = sensorCanvas.getContext('2d');
 
+// Grab the timer display element
+const timerDisplay = document.getElementById('timerDisplay');  // Add this line
+
 // Global variables
 let ros;
 let cmdVel;
 let forwardInterval, leftInterval, rightInterval;
 let robPos;
-let irData = []; // Store IR sensor data
+let irData = [];
+let timerInterval; 
+let timerMilliseconds = 0; 
+
+// Function to start the timer
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timerMilliseconds += 100; // Increment by 100 ms (0.1 second)
+    let seconds = (timerMilliseconds / 1000).toFixed(2);
+    timerDisplay.innerText = `Timer: ${seconds}s`;
+  }, 100); 
+}
+
+// Function to stop the timer
+function stopTimer() {
+  clearInterval(timerInterval);
+  // timerDisplay.innerText = 'Timer: 0.00s';
+  timerMilliseconds = 0;
+}
+
 
 // Function to reset everything
 function resetAll() {
@@ -97,7 +119,6 @@ connBtn.addEventListener('click', function() {
         drawIRData(irData);
       });
       
-
       robPos.subscribe(function(message) {
         console.log('Received odometry data:', message.pose.pose.position);
         xPos.innerText = message.pose.pose.position.x.toFixed(2);
@@ -122,8 +143,7 @@ connBtn.addEventListener('click', function() {
   }
 });
 
-
-// Function to draw IR sensor data on the canvas (allllllll ChatGPT)
+// Function to draw IR sensor data on the canvas
 function drawIRData(irData) {
   ctx.clearRect(0, 0, sensorCanvas.width, sensorCanvas.height); // Clear canvas
 
@@ -181,8 +201,7 @@ function drawIRData(irData) {
   ctx.fill();
 }
 
-
-// Forward movement (back to my work)
+// Forward movement
 fwdBtn.addEventListener('mousedown', function() {
   forwardInterval = setInterval(function() {
     var twist = new ROSLIB.Message({
@@ -241,4 +260,15 @@ rgtBtn.addEventListener('mouseup', function() {
   });
   cmdVel.publish(twist);
 });
+
+// Event listener for the "Auto" button
+autoButton.addEventListener('click', () => {
+  startTimer();  
+});
+
+// Event listener for the "Manual" button
+manualButton.addEventListener('click', () => {
+  stopTimer();
+});
+
 
