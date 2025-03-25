@@ -13,8 +13,8 @@ robot_name = 'bravo'
 kp = 0.005
 kd = 0.005
 ki = 0.0 #add in later for PID control
-kp_side = 0.001
-kd_side = 0.001
+kp_side = 0.002
+kd_side = 0.002
 
 previous_center = [100, 75, 50, 25, 0] #init with average of 50
 previous_right = [100, 75, 50, 25, 0]
@@ -22,9 +22,10 @@ previous_left = [100, 75, 50, 25, 0]
 error_sum = 0
 left = 0
 right = 0
-front = 0
+front_l = 0
+front_r = 0
 
-speed = 0.15 #m/s
+speed = 0.3 #m/s
 
 # ROS publishers
 drive_pub = roslibpy.Topic(ros_node, f'/{robot_name}/cmd_vel', 'geometry_msgs/Twist')
@@ -70,29 +71,28 @@ def center_track(left, right, previous_center, error_sum): #track both walls
                                         "angular": {'x': 0.0, 'y': 0.0, 'z': float(theta)}}))
 
 def callback_ir(message): #read IR data
-    global left, right, front
+    global left, right, front_l, front_r
     values = [reading['value'] for reading in message['readings']]
     left1 = values[0]
     left2 = values[1]
-    left3 = values[2]
-    front1 = values[3]
+    front_l = values[2]
+    
     right1 = values[6]
     right2 = values[5]
-    right3 = values[4]
+    front_r = values[4]
 
-    left = (0.5*left1 + 1.5*left2)/2
-    right = (0.5*right1 + 1.5*right2)/2
-    front = (1.5*front1 + 0.75*left3 + 0.75*right3)/3
+    left = (0.5*left1 + 1*left2 + 1.5*front_l)/3
+    right = (0.5*right1 + 1*right2 + 1.5*front_r)/3
 
 ir_topic.subscribe(callback_ir)
 
-while True: #run wall follow algorithm
-    #print(f'Left: {left}, Right: {right}, Front: {front}')
+while True: #run wall follow and obstacle avoid algorithm
+    #print(f'Left: {left}, Right: {right}, Front: {front}')   
     if left > 50 and right > 50:
         center_track(left, right, previous_center, error_sum)
-    elif left == 0 and right > 50:
+    elif right > 50:
         right_follow(right, previous_right, error_sum)
-    elif right == 0 and left > 50:
+    elif left > 50:
         left_follow(left, previous_left, error_sum)
     else:
         center_track(left, right, previous_center, error_sum)
