@@ -7,7 +7,7 @@
   </head>
   <body>
     <header>
-      <h1>iRobot Control Panel</h1>
+      <h1>Team McLaren HQ</h1>
     </header>
 
     <div>
@@ -17,24 +17,41 @@
 
     <h2 id="statusText">Disconnected</h2>
 
-    <div id="controlButtons">
-      <button id="LeftButton">⬅️</button>
-      <button id="UpButton">⬆️</button>
-      <button id="RightButton">➡️</button>
+    <div>
+      <p>Controls</p>
     </div>
 
-    <div id="modeButton">
-      <button id="autoButton">Auto</button>
-      <button id="manualButton">Manual</button>
+    <div id="controlButtons">
+      <button id="LeftButton">↶</button>
+      <button id="UpButton">↑</button>
+      <button id="RightButton">↷</button>
+    </div>
+
+    <div>
+      <p id="batteryDisplay">Battery: 0%</p>  
+    </div>
+
+    <div>
+      <p id="speedDisplay">Speed: 0</p>
+    </div>
+
+    <div>
+      <p id ="modeStatus">Mode: None</p>
+    </div>
+
+    <div>
+      <p id="irReadings">IR Readings</p>
+      <canvas id="sensorCanvas" width="300" height="300" style="border: 1px solid black;"></canvas>
+    </div>
+
+        <div id="raceButtons">
+      <button id="startButton">Race!</button>
+      <button id="stopButton">Finish</button>
     </div> 
 
     <div>
       <p id="timerDisplay">Timer: 0s</p>
     </div>    
-
-    <div>
-        <canvas id="sensorCanvas" width="300" height="300" style="border: 1px solid black;"></canvas>
-    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.js"></script>
     <script src="12wk_website_script.js"></script>
