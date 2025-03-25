@@ -1,88 +1,130 @@
+/* General Styles */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;600&display=swap');
+
 body {
-    color: #dfdddd;
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Orbitron', sans-serif;
+    background: #121212;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    height: 100vh;
 }
 
 header {
-    background-color: #383838;
     width: 100%;
     text-align: center;
-    padding: 20px;
+    background: linear-gradient(90deg, #ff0000, #800000);
+    padding: 15px;
+    box-shadow: 0px 4px 8px rgba(255, 0, 0, 0.3);
+    font-size: 28px;
+    text-transform: uppercase;
+    font-weight: bold;
+    border-bottom: 3px solid #ff0000;
+    font-family: 'Rajdhani', sans-serif;
 }
 
-header h1 {
-    color: #b2eaed;
-    font-size: 2.5rem;
-}
-
-div {
+main {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 20px;
+    width: 90%;
+    max-width: 1400px;
     margin-top: 20px;
-    text-align: center;
+    justify-content: center;
+    align-items: center;
 }
 
-input[type="text"] {
-    padding: 10px;
-    margin: 10px;
-    border: 2px solid #96f70f;
-    border-radius: 4px;
-    width: 250px;
-    background-color: #383838;
-    color: #dfdddd;
-    font-size: 1rem;
-}
-
-#connectButton {
-    padding: 12px 20px;
-    background-color: #b2eaed;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 1.1rem;
-    transition: background-color 0.3s ease;
-}
-
-#connectButton:hover {
-    background-color: #e373e7;
-}
-
-#controlButtons {
+/* Controls */
+#controlButtons, #raceButtons {
     display: flex;
     justify-content: center;
     gap: 15px;
-    margin-top: 15px;
-}
-
-#controlButtons button {
-    font-size: 2rem;
-    padding: 15px;
-    background-color: #383838;
-    border: none;
-    border-radius: 6px;
-    color: #dfdddd;
-    transition: background-color 0.3s ease;
-}
-
-#controlButtons button:hover {
-    background-color: #555;
-}
-
-
-h2 {
-    color: #e61515;
-    font-size: 1.5rem;
-    text-align: center;
     margin-top: 20px;
 }
 
-p {
-    font-size: 1.2rem;
-    color: #1f1d1d;
+button {
+    background: #222;
+    color: #ff0000;
+    border: 2px solid #ff0000;
+    padding: 15px 25px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 12px;
+    box-shadow: 0px 0px 10px rgba(255, 0, 0, 0.5);
+    font-family: 'Rajdhani', sans-serif;
 }
 
-strong {
-    color: #0a8fbb;
+button:hover {
+    background: #ff0000;
+    color: #fff;
+    box-shadow: 0px 0px 20px rgba(255, 0, 0, 0.8);
+}
+
+/* Status Displays */
+.status-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(255, 0, 0, 0.2);
+    border-radius: 10px;
+    font-size: 22px;
+    font-family: 'Rajdhani', sans-serif;
+    text-align: center;
+}
+
+/* Sensor Display */
+#sensorCanvas {
+    background: #222;
+    border: 2px solid #ff0000;
+    box-shadow: 0px 0px 15px rgba(255, 0, 0, 0.5);
+    margin-top: 20px;
+    justify-self: center;
+}
+
+/* Input Field */
+#nameInput {
+    padding: 12px;
+    border-radius: 6px;
+    border: 2px solid #ff0000;
+    background: #222;
+    color: #fff;
+    font-size: 20px;
+    text-align: center;
+    margin: 10px;
+    font-family: 'Rajdhani', sans-serif;
+}
+
+#connectButton {
+    padding: 12px 24px;
+    font-size: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+    main {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    main {
+        grid-template-columns: 1fr;
+    }
+    button {
+        font-size: 18px;
+        padding: 12px;
+    }
+    #sensorCanvas {
+        width: 250px;
+        height: 250px;
+    }
 }
