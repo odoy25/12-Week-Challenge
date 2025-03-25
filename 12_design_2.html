@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: beige;
+        }
+        h1 {
+            font-size: 36px;
+            margin: 20px 0;
+        }
+        img {
+            width: 60%;
+            max-width: 500px;
+            margin: 20px 0;
+            border-radius: 15px;
+            border: 3px solid black;
+            transition: transform 1s ease-in-out;
+        }
+        img:hover {
+            rotate: 360deg;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px;
+            font-size: 16px;
+            background-color: lightblue;
+            border: 1px solid blue;
+            cursor: pointer;
+            transition: background 0.3s;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+        }
+        button:hover {
+            background-color: deepskyblue;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .status {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+            color: red;
+        }
+        .position p {
+            margin: 3px;
+            background-color: rgb(218, 72, 43);
+            color: white;
+            border-radius: 18px;
+            padding: 10px;
+            width: 100px;
+            display: inline-block;
+        }
+        .chart-container {
+            width: 48%;
+            margin: auto;
+            display: inline-block;
+            text-align: left;
+        }
+        .charts-wrapper {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Control Panel</h1>
+    <img id="robotImage" src="image.jpg" alt="Robot Image">
+    <br>
+    <input type="text" id="nameInput" placeholder="Enter robot name">
+    <input type="date">
+    <input type="checkbox">
+    <button id="connBtn">C</button>
+    <button id="disconnectBtn" style="display: none;"><img src="nuke.jpg" alt="D"></button>
+    <p class="status" id="status">Disconnected</p>
+    <p>Battery: <span id="battVoltage">--</span>%</p>
+    <div class="controls">
+        <button id="leftBtn">L</button>
+        <button id="rightBtn">R</button>
+        <button id="fwdBtn">F</button>
+        <button id="stopBtn">S</button>
+        <button id="centerFollowBtn">C Follow</button>
+    </div>
+    <div class="position" id="position">
+        <p id="posX">X: 0</p>
+        <p id="posY">Y: 0</p>
+        <p id="timer">Time: 0s</p>
+    </div>
+
+    <!-- Wrapper for both charts side by side -->
+    <div class="charts-wrapper">
+        <div class="chart-container">
+            <canvas id="irChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="positionChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        console.clear();
+        console.log("Made it here");
+
+        const ip = "192.168.8.104";
+        const port = "9012";
+        let x = 0, y = 0;
+        let robName = "juliet";
+        let intervalId = null;
+        let left = 0, right = 0;  // Left and right IR sensor values
+        let previous = [0, 25, 50, 75, 100]; // Init with average of 50
+        let error_sum = 0;  // For integral part of PID controller
+
+        let connBtn = document.getElementById("connBtn");
+        let nameInput = document.getElementById("nameInput");
+        let fwdBtn = document.getElementById("fwdBtn");
+        let leftBtn = document.getElementById("leftBtn");
+        let rightBtn = document.getElementById("rightBtn");
+        let stopBtn = document.getElementById("stopBtn");
+        let disconnectBtn = document.getElementById("disconnectBtn");
+        let battVoltage = document.getElementById("battVoltage");
+        let centerFollowBtn = document.getElementById("centerFollowBtn");
+
+        nameInput.addEventListener("input", function () {
+            robName = nameInput.value.trim() || "juliet"; // Fallback to default
+        });
+
+        // Initialize Chart.js for IR sensor graph
+        const ctx = document.getElementById('irChart').getContext('2d');
+        const irChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['IR1', 'IR2', 'IR3', 'IR4', 'IR5', 'IR6', 'IR7'],
+                datasets: [{
+                    label: 'IR Sensor Values',
+                    data: [0, 0, 0, 0, 0, 0, 0],
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 4500 },
+                    y: { beginAtZero: true, max: 4500 }
+                }
+            }
+        });
+
+        // Initialize Chart.js for position graph (X vs Y)
+        const posCtx = document.getElementById('positionChart').getContext('2d');
+        const positionChart = new Chart(posCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Robot Position (X, Y)',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    pointRadius: 5,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { x: { title: { display: true, text: 'X Position (m)' } }, y: { title: { display: true, text: 'Y Position (m)' } } }
+            }
+        });
+
+        // When the connect button is clicked
+        connBtn.addEventListener("click", function () {
+            var ros = new ROSLIB.Ros({
+                url: `ws://${ip}:${port}`
+            });
+
+            ros.on('connection', function () {
+                console.log('Connected to websocket server.');
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').style.color = 'green';
+                connBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
+
+                // Initialize drive_pub for publishing velocity commands
+                let drive_pub = new ROSLIB.Topic({
+                    ros: ros,
+                    name: `/${robName}/cmd_vel`,
+                    messageType: 'geometry_msgs/Twist'
+                });
+
+                // Subscribe to battery state topic
+                let battTopic = new ROSLIB.Topic({
+                    ros: ros,
+                    name: `/${robName}/battery_state`,
+                    messageType: 'sensor_msgs/BatteryState'
+                });
+
+                battTopic.subscribe(function (message) {
+                    let btP = message.percentage * 100;
+                    battVoltage.innerText = btP.toFixed(1);
+                });
+
+                // Subscribe to IR sensor data
+                let irTopic = new ROSLIB.Topic({
+                    ros: ros,
+                    name: `/${robName}/ir_intensity`,
+                    messageType: 'irobot_create_msgs/IrIntensityVector'
+                });
+
+                irTopic.subscribe(function (message) {
+                    let values = message.readings.map(reading => reading.value);
+                    irChart.data.datasets[0].data = values; // Update IR chart data
+                    irChart.update(); // Refresh the chart
+
+                    let left1 = values[0], left2 = values[1], left3 = values[2];
+                    let right1 = values[6], right2 = values[5], right3 = values[4];
+                    left = (0.25 * left1 + 0.5 * left2 + left3) / 1.75;
+                    right = (0.25 * right1 + 0.5 * right2 + right3) / 1.75;
+                });
+
+                // Subscribe to odometry data
+                let odomTopic = new ROSLIB.Topic({
+                    ros: ros,
+                    name: `/${robName}/odom`,
+                    messageType: 'nav_msgs/Odometry'
+                });
+
+                odomTopic.subscribe(function (message) {
+                    x = message.pose.pose.position.x;
+                    y = message.pose.pose.position.y;
+
+                    // Update position display
+                    document.getElementById('posX').textContent = `X: ${x.toFixed(2)}`;
+                    document.getElementById('posY').textContent = `Y: ${y.toFixed(2)}`;
+
+                    // Add new data point to position chart
+                    positionChart.data.datasets[0].data.push({ x: x, y: y });
+                    positionChart.update(); // Refresh the chart
+                });
+
+                let intervalId = null; // Shared intervalId to manage active commands
+                let timerInterval = null; // Timer interval for the running timer
+                let elapsedTime = 0; // Elapsed time in seconds
+
+                // Function to clear the current interval and stop the robot
+                function clearActiveCommand(drive_pub) {
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                        intervalId = null;
+
+                        // Send a stop command
+                        let stopTwist = new ROSLIB.Message({
+                            linear: { x: 0.0, y: 0.0, z: 0.0 },
+                            angular: { x: 0.0, y: 0.0, z: 0.0 }
+                        });
+                        drive_pub.publish(stopTwist);
+                    }
+                }
+
+                // Function to start the timer
+                function startTimer() {
+                    clearInterval(timerInterval); // Clear any existing timer
+                    elapsedTime = 0; // Reset elapsed time
+                    document.getElementById("timer").textContent = `Time: ${elapsedTime}s`;
+
+                    timerInterval = setInterval(function () {
+                        elapsedTime++;
+                        document.getElementById("timer").textContent = `Time: ${elapsedTime}s`;
+                    }, 1000); // Update every second
+                }
+
+                // Function to stop the timer
+                function stopTimer() {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+
+                // Forward button logic
+                fwdBtn.addEventListener("click", function () {
+                    console.log("Forward Button Pressed");
+                    clearActiveCommand(drive_pub);
+
+                    intervalId = setInterval(function () {
+                        let twist = new ROSLIB.Message({
+                            linear: { x: 0.4, y: 0.0, z: 0.0 }, // Move forward
+                            angular: { x: 0.0, y: 0.0, z: 0.0 }  // No rotation
+                        });
+                        drive_pub.publish(twist);
+                    }, 100);
+
+                    setTimeout(function () {
+                        clearActiveCommand(drive_pub);
+                    }, 100000); // 100 seconds
+                });
+
+                // Left button logic
+                leftBtn.addEventListener("click", function () {
+                    console.log("Left Button Pressed");
+                    clearActiveCommand(drive_pub);
+
+                    intervalId = setInterval(function () {
+                        let twist = new ROSLIB.Message({
+                            linear: { x: 0.0, y: 0.0, z: 0.0 }, // No forward movement
+                            angular: { x: 0.0, y: 0.0, z: 0.4 }  // Rotate left
+                        });
+                        drive_pub.publish(twist);
+                    }, 100);
+
+                    setTimeout(function () {
+                        clearActiveCommand(drive_pub);
+                    }, 100000); // 100 seconds
+                });
+
+                // Right button logic
+                rightBtn.addEventListener("click", function () {
+                    console.log("Right Button Pressed");
+                    clearActiveCommand(drive_pub);
+
+                    intervalId = setInterval(function () {
+                        let twist = new ROSLIB.Message({
+                            linear: { x: 0.0, y: 0.0, z: 0.0 }, // No forward movement
+                            angular: { x: 0.0, y: 0.0, z: -0.4 }  // Rotate right
+                        });
+                        drive_pub.publish(twist);
+                    }, 100);
+
+                    setTimeout(function () {
+                        clearActiveCommand(drive_pub);
+                    }, 100000); // 100 seconds
+                });
+
+                // Stop button logic
+                stopBtn.addEventListener("click", function () {
+                    console.log("Stop Button Pressed");
+                    clearActiveCommand(drive_pub);
+                    stopTimer(); // Stop the timer
+                });
+
+                // Center follow logic
+                centerFollowBtn.addEventListener("click", function () {
+                    console.log("Center Follow Button Pressed");
+                    clearActiveCommand(drive_pub);
+                    startTimer(); // Start the timer
+
+                    intervalId = setInterval(function () {
+                        let twist = new ROSLIB.Message({
+                            linear: { x: 0.25, y: 0.0, z: 0.0 },
+                            angular: { x: 0.0, y: 0.0, z: (right - left) * 0.005 }
+                        });
+                        drive_pub.publish(twist);
+                    }, 100);
+
+                    setTimeout(function () {
+                        clearActiveCommand(drive_pub);
+                        stopTimer(); // Stop the timer after 100 seconds
+                    }, 100000); // 100 seconds
+                });
+
+                // Disconnect button event
+                disconnectBtn.addEventListener("click", function () {
+                    ros.close();
+                    document.getElementById('status').textContent = 'Disconnected';
+                    document.getElementById('status').style.color = 'red';
+                    connBtn.style.display = 'inline-block';
+                    disconnectBtn.style.display = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
