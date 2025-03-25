@@ -1,59 +1,68 @@
-<html>
-  <head>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel='stylesheet' href="12wk_website_style.css">
-    <title>Control Panel</title>
-  </head>
-  <body>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Team McLaren Dashboard</title>
+    <!-- Link to External CSS -->
+    <link rel="stylesheet" href="12wk_website_style.css"> <!-- Make sure to point to your correct CSS file -->
+</head>
+
+<body>
     <header>
-      <h1>Team McLaren HQ</h1>
+        <h1>Team McLaren Dashboard</h1>
     </header>
 
-    <div>
-      <input id="nameInput" type="text" placeholder="Enter robot name">
-      <button id="connectButton">Connect</button>
+    <!-- Centered Connection Section -->
+    <div class="center-section">
+        <input id="nameInput" type="text" placeholder="Choose Your Racer">
+        <button id="connectButton">Connect</button>
+        <h2 id="statusText">Disconnected</h2>
     </div>
 
-    <h2 id="statusText">Disconnected</h2>
+    <main>
+        <!-- Left Section: Controls and Racing -->
+        <div class="left-section">
+            <p id="modeStatus">Mode: None</p>
+            <div>
+                <p>Controls</p>
+            </div>
+            <div id="controlButtons">
+                <button id="LeftButton">↶</button>
+                <button id="UpButton">↑</button>
+                <button id="RightButton">↷</button>
+            </div>
+            <div>
+                <p>Racing Interface</p>
+            </div>
+            <div id="raceButtons">
+                <button id="startButton">Race!</button>
+                <button id="stopButton">Finish</button>
+            </div>
+            <div>
+                <p>Map</p>
+                <canvas id="mapCanvas" width="440" height="300" style="border: 1px solid black;"></canvas>
+            </div>
+        </div>
 
-    <div>
-      <p>Controls</p>
-    </div>
+        <!-- Right Section: Metrics -->
+        <div class="right-section">
+            <p id="timerDisplay">Timer: 0s</p>
+            <p id="batteryDisplay">Battery: 0%</p>
+            <p id="speedDisplay">Speed: 0</p>
+            <p id="turnDisplay">Turn Rate: 0</p>
+            <p id="irReadings">IR Readings</p>
+            <canvas id="sensorCanvas" width="300" height="300" style="border: 1px solid black;"></canvas>
+        </div>
+    </main>
 
-    <div id="controlButtons">
-      <button id="LeftButton">↶</button>
-      <button id="UpButton">↑</button>
-      <button id="RightButton">↷</button>
-    </div>
-
-    <div>
-      <p id="batteryDisplay">Battery: 0%</p>  
-    </div>
-
-    <div>
-      <p id="speedDisplay">Speed: 0</p>
-    </div>
-
-    <div>
-      <p id ="modeStatus">Mode: None</p>
-    </div>
-
-    <div>
-      <p id="irReadings">IR Readings</p>
-      <canvas id="sensorCanvas" width="300" height="300" style="border: 1px solid black;"></canvas>
-    </div>
-
-        <div id="raceButtons">
-      <button id="startButton">Race!</button>
-      <button id="stopButton">Finish</button>
-    </div> 
-
-    <div>
-      <p id="timerDisplay">Timer: 0s</p>
-    </div>    
-
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.js"></script>
     <script src="12wk_website_script.js"></script>
-  </body>
+</body>
+
 </html>
+
+
