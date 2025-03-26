@@ -97,7 +97,7 @@
         <button id="rightBtn">R</button>
         <button id="fwdBtn">F</button>
         <button id="stopBtn">S</button>
-        <button id="centerFollowBtn">C Follow</button>
+        <button id="centerFollowBtn">Race</button>
     </div>
     <div class="position" id="position">
         <p id="posX">X: 0</p>
@@ -128,7 +128,7 @@
         let previous_center = [100, 75, 50, 25, 0]; //init with average of 50
         let previous_right = [100, 75, 50, 25, 0];
         let previous_left = [100, 75, 50, 25, 0];
-        let speed = 0.3; // m/s
+        var speed = 0.3; // m/s
         var kp = 0.005;
         var kd = 0.005;
         var kp_side = 0.002;
