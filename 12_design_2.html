@@ -125,8 +125,14 @@
         let robName = "juliet";
         let intervalId = null;
         let left = 0, right = 0;  // Left and right IR sensor values
-        let previous = [0, 25, 50, 75, 100]; // Init with average of 50
-        let error_sum = 0;  // For integral part of PID controller
+        let previous_center = [100, 75, 50, 25, 0]; //init with average of 50
+        let previous_right = [100, 75, 50, 25, 0];
+        let previous_left = [100, 75, 50, 25, 0];
+        let speed = 0.3; // m/s
+        var kp = 0.005;
+        var kd = 0.005;
+        var kp_side = 0.002;
+        var kd_side = 0.002;
 
         let connBtn = document.getElementById("connBtn");
         let nameInput = document.getElementById("nameInput");
@@ -235,8 +241,8 @@
 
                     let left1 = values[0], left2 = values[1], left3 = values[2];
                     let right1 = values[6], right2 = values[5], right3 = values[4];
-                    left = (0.25 * left1 + 0.5 * left2 + left3) / 1.75;
-                    right = (0.25 * right1 + 0.5 * right2 + right3) / 1.75;
+                    left = (0.5*left1 + left2 + 1.5*left3) / 3;
+                    right = (0.5*right1 + right2 + 1.5*right3) / 3;
                 });
 
                 // Subscribe to odometry data
@@ -357,19 +363,68 @@
                     stopTimer(); // Stop the timer
                 });
 
-                // Center follow logic
+                // Center Follow Function
+                function centerFollow(left, right, previous_center) {
+                    delete previous_center[0];
+                    previous_center.append(right-left);
+                    prev = sum(pervious_center)/len(previous_center);
+
+                    theta = kp*(right - left) + kd*(prev/0.5);
+
+                    let twist = new ROSLIB.Message({
+                            linear: { x: speed, y: 0.0, z: 0.0 },
+                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                        });
+                    drive_pub.publish(twist);
+                }
+
+                // Left Wall Follow Function
+                function centerFollow(left, previous_left) {
+                    delete previous_left[0];
+                    previous_left.append(50-left);
+                    prev = sum(pervious_left)/len(previous_left);
+
+                    theta = kp_side*(50 - left) + kd_side*(prev/0.5);
+
+                    let twist = new ROSLIB.Message({
+                            linear: { x: speed, y: 0.0, z: 0.0 },
+                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                        });
+                    drive_pub.publish(twist);
+                }
+                
+                // Right Wall Follow Function
+                function centerFollow(right, previous_right) {
+                    delete previous_right[0];
+                    previous_center.append(right-50);
+                    prev = sum(pervious_right)/len(previous_right);
+
+                    theta = kp_side*(right - 50) + kd_side*(prev/0.5);
+
+                    let twist = new ROSLIB.Message({
+                            linear: { x: speed, y: 0.0, z: 0.0 },
+                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                        });
+                    drive_pub.publish(twist);
+                }
+
+                // Racetrack logic
                 centerFollowBtn.addEventListener("click", function () {
-                    console.log("Center Follow Button Pressed");
+                    console.log("Race Button Pressed");
                     clearActiveCommand(drive_pub);
                     startTimer(); // Start the timer
 
                     intervalId = setInterval(function () {
-                        let twist = new ROSLIB.Message({
-                            linear: { x: 0.25, y: 0.0, z: 0.0 },
-                            angular: { x: 0.0, y: 0.0, z: (right - left) * 0.005 }
-                        });
-                        drive_pub.publish(twist);
-                    }, 100);
+                        if (left > 50 && right > 50) {
+                            center_track(left, right, previous_center);
+                        } else if (right > 50) {
+                            right_follow(right, previous_right);
+                        } else if (left > 50) {
+                            left_follow(left, previous_left);
+                        } else {
+                            center_track(left, right, previous_center);
+                        }
+                    }, 100); // run at 10Hz
 
                     setTimeout(function () {
                         clearActiveCommand(drive_pub);

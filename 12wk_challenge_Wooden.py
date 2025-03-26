@@ -19,11 +19,8 @@ kd_side = 0.002
 previous_center = [100, 75, 50, 25, 0] #init with average of 50
 previous_right = [100, 75, 50, 25, 0]
 previous_left = [100, 75, 50, 25, 0]
-error_sum = 0
 left = 0
 right = 0
-front_l = 0
-front_r = 0
 
 speed = 0.3 #m/s
 
@@ -32,46 +29,43 @@ drive_pub = roslibpy.Topic(ros_node, f'/{robot_name}/cmd_vel', 'geometry_msgs/Tw
 drive_pub.advertise()
 ir_topic = roslibpy.Topic(ros_node, f'/{robot_name}/ir_intensity', 'irobot_create_msgs/IrIntensityVector')
     
-def left_follow(left, previous_left, error_sum): #track the left wall
+def left_follow(left, previous_left): #track the left wall
     print('Tracking left wall')
     del previous_left[0]
     previous_left.append(50-left)
     prev = sum(previous_left)/len(previous_left)
     
-    error_sum += (50-left)
-    theta = kp_side*(50 - left) + kd_side*((prev)/0.5) #+ ki*(error_sum*0.5)
+    theta = kp_side*(50 - left) + kd_side*((prev)/0.5)
     print(f'Theta: {theta}')
 
     drive_pub.publish(roslibpy.Message({"linear": {'x': speed, 'y': 0.0, 'z': 0.0}, 
                                         "angular": {'x': 0.0, 'y': 0.0, 'z': float(theta)}}))
 
-def right_follow(right, previous_right, error_sum): # track the right wall
+def right_follow(right, previous_right): # track the right wall
     print('Tracking right wall')
     del previous_right[0]
     previous_right.append(right-50)
     prev = sum(previous_right)/len(previous_right)
     
-    error_sum += (right-50)
-    theta = kp_side*(right - 50) + kd_side*((prev)/0.5) #+ ki*(error_sum*0.5)
+    theta = kp_side*(right - 50) + kd_side*((prev)/0.5)
     print(f'Theta: {theta}')
 
     drive_pub.publish(roslibpy.Message({"linear": {'x': speed, 'y': 0.0, 'z': 0.0}, 
                                         "angular": {'x': 0.0, 'y': 0.0, 'z': float(theta)}}))
 
-def center_track(left, right, previous_center, error_sum): #track both walls
+def center_track(left, right, previous_center): #track both walls
     del previous_center[0]
     previous_center.append(right-left)
     prev = sum(previous_center)/len(previous_center)
     
-    error_sum += (right-left)
-    theta = kp*(right - left) + kd*(prev/0.5) + ki*(error_sum*0.5)
+    theta = kp*(right - left) + kd*(prev/0.5)
     #print(f'Theta: {theta}')
 
     drive_pub.publish(roslibpy.Message({"linear": {'x': speed, 'y': 0.0, 'z': 0.0}, 
                                         "angular": {'x': 0.0, 'y': 0.0, 'z': float(theta)}}))
 
 def callback_ir(message): #read IR data
-    global left, right, front_l, front_r
+    global left, right
     values = [reading['value'] for reading in message['readings']]
     left1 = values[0]
     left2 = values[1]
@@ -89,12 +83,12 @@ ir_topic.subscribe(callback_ir)
 while True: #run wall follow and obstacle avoid algorithm
     #print(f'Left: {left}, Right: {right}, Front: {front}')   
     if left > 50 and right > 50:
-        center_track(left, right, previous_center, error_sum)
+        center_track(left, right, previous_center)
     elif right > 50:
-        right_follow(right, previous_right, error_sum)
+        right_follow(right, previous_right)
     elif left > 50:
-        left_follow(left, previous_left, error_sum)
+        left_follow(left, previous_left)
     else:
-        center_track(left, right, previous_center, error_sum)
+        center_track(left, right, previous_center)
 
     time.sleep(0.1)
