@@ -74,7 +74,7 @@ function startTimer() {
 // Function to stop the timer
 function stopTimer() {
   clearInterval(timerInterval);
-  // timerDisplay.innerText = 'Timer: 0.00s';
+  timerDisplay.innerText = 'Timer: 0.00s';
   timerMilliseconds = 0;
 }
 
