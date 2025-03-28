@@ -1,6 +1,9 @@
 const hostip = '192.168.8.104'; 
 const port = '9012';
 
+//////// INTIALIZATION STUFF /////////
+var mode = 1; // 1 for manual, 2 for auto
+
 // Grab elements from the HTML page
 nameInput = document.getElementById('nameInput');
 connBtn = document.getElementById('connectButton');
@@ -8,13 +11,14 @@ fwdBtn = document.getElementById('UpButton');
 lftBtn = document.getElementById('LeftButton');
 rgtBtn = document.getElementById('RightButton');
 statusText = document.getElementById('statusText');
-xPos = document.getElementById('xPos');
-yPos = document.getElementById('yPos');
-zPos = document.getElementById('zPos');
 
 // Grab the canvas element for IR sensor visualization
 const sensorCanvas = document.getElementById('sensorCanvas');
 const ctx = sensorCanvas.getContext('2d');
+
+// Grab the canvas element for mapping
+const mapCanvas = document.getElementById('mapCanvas');
+const mapCtx = mapCanvas.getContext('2d');
 
 // Grab the timer display element
 const timerDisplay = document.getElementById('timerDisplay');  // Add this line
@@ -27,6 +31,36 @@ let robPos;
 let irData = [];
 let timerInterval; 
 let timerMilliseconds = 0; 
+let flashingInterval;  // Global flashing interval
+
+// Function to reset everything
+function resetAll() {
+  clearInterval(forwardInterval);
+  clearInterval(leftInterval);
+  clearInterval(rightInterval);
+
+  var stopTwist = new ROSLIB.Message({
+    linear: { x: 0, y: 0, z: 0 },
+    angular: { x: 0, y: 0, z: 0 }
+  });
+  cmdVel.publish(stopTwist);
+
+  // Clear the IR canvas
+  ctx.clearRect(0, 0, sensorCanvas.width, sensorCanvas.height);  // Clears the entire canvas
+
+  statusText.innerText = "Disconnected";
+  statusText.style.color = '#e61515';
+
+  if (ros && ros.isConnected) {
+    ros.close();
+  }
+
+  nameInput.value = '';
+  robName = '';
+  connBtn.innerText = "Connect";
+}
+
+//////// TIMER/RACING BUTTONS CODE ////////
 
 // Function to start the timer
 function startTimer() {
@@ -44,45 +78,35 @@ function stopTimer() {
   timerMilliseconds = 0;
 }
 
+// Event listener for the "Race!" button
+startButton.addEventListener('click', () => {
+  startTimer(); 
+  mode = 2; // Set mode to auto
+  setLEDColor(mode); // Set LED color to red (flashing) 
+});
 
-// Function to reset everything
-function resetAll() {
-  clearInterval(forwardInterval);
-  clearInterval(leftInterval);
-  clearInterval(rightInterval);
+// Event listener for the "Finish" button
+stopButton.addEventListener('click', () => {
+  stopTimer();
+  mode = 1; // Set mode to manual
+  setLEDColor(mode); // Set LED color to blue (static)
+});
 
-  var stopTwist = new ROSLIB.Message({
-    linear: { x: 0, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: 0 }
-  });
-  cmdVel.publish(stopTwist);
+//////// CONNECT/DISCONNECT CODE ////////
 
-  xPos.innerText = '0.00';
-  yPos.innerText = '0.00';  
-  zPos.innerText = '0.00';
-
-  statusText.innerText = "Disconnected";
-  statusText.style.color = '#e61515';
-
-  if (ros && ros.isConnected) {
-    ros.close();
-  }
-
-  nameInput.value = '';
-  robName = '';
-  connBtn.innerText = "Connect";
-}
-
+// Connect/Disconnect button event listener
 // Connect/Disconnect button event listener
 connBtn.addEventListener('click', function() {
   const robName = nameInput.value;
 
+  // Check if ros is connected
   if (ros && ros.isConnected) {
     console.log("Disconnecting from robot.");
-    resetAll();
+    resetAll();  // Reset everything
   } else {
     console.log("Connecting to robot:", robName);
 
+    // Create a new ROS connection
     ros = new ROSLIB.Ros({
       url: `ws://${hostip}:${port}`
     });
@@ -91,21 +115,30 @@ connBtn.addEventListener('click', function() {
       console.log('Connected to websocket server.');
       statusText.innerText = "Connected";
       statusText.style.color = '#03B5AA';
-      connBtn.innerText = "Disconnect";
+      connBtn.innerText = "Disconnect";  // Change button text to "Disconnect"
 
+      // Setup cmdVel topic
       cmdVel = new ROSLIB.Topic({
         ros: ros,
         name: `/${robName}/cmd_vel`,
         messageType: 'geometry_msgs/Twist'
       });
 
+      // Setup robPos topic
       robPos = new ROSLIB.Topic({
         ros: ros,
         name: `/${robName}/odom`,
         messageType: 'nav_msgs/Odometry'
       });
 
-      // Subscribe to the IR sensor data topic
+      // Setup LED topic
+      ledTopic = new ROSLIB.Topic({
+        ros: ros,
+        name: `/${robName}/cmd_lightring`,
+        messageType: 'irobot_create_msgs/LightringLeds'
+      });
+
+      // Subscribe to IR sensor data
       const irTopic = new ROSLIB.Topic({
         ros: ros,
         name: `/${robName}/ir_intensity`,
@@ -113,18 +146,12 @@ connBtn.addEventListener('click', function() {
       });
 
       irTopic.subscribe(function(message) {
-        console.log('Full IR sensor message received:', message);
         irData = message.readings.map(reading => reading.value);
-        console.log("Extracted IR data:", irData);
         drawIRData(irData);
       });
-      
-      robPos.subscribe(function(message) {
-        console.log('Received odometry data:', message.pose.pose.position);
-        xPos.innerText = message.pose.pose.position.x.toFixed(2);
-        yPos.innerText = message.pose.pose.position.y.toFixed(2);
-        zPos.innerText = message.pose.pose.position.z.toFixed(2);
-      });
+
+    // Disable safety features when connected
+      disableSafetyFeatures(robName);
     });
 
     ros.on('error', function(error) {
@@ -142,6 +169,9 @@ connBtn.addEventListener('click', function() {
     });
   }
 });
+
+
+//////// IR READINGS CODE ////////
 
 // Function to draw IR sensor data on the canvas
 function drawIRData(irData) {
@@ -201,11 +231,13 @@ function drawIRData(irData) {
   ctx.fill();
 }
 
+//////// DRIVING CODE ////////
+
 // Forward movement
 fwdBtn.addEventListener('mousedown', function() {
   forwardInterval = setInterval(function() {
     var twist = new ROSLIB.Message({
-      linear: { x: 0.2, y: 0, z: 0 },
+      linear: { x: 5, y: 0, z: 0 },
       angular: { x: 0, y: 0, z: 0 }
     });
     cmdVel.publish(twist);
@@ -226,7 +258,7 @@ lftBtn.addEventListener('mousedown', function() {
   leftInterval = setInterval(function() {
     var twist = new ROSLIB.Message({
       linear: { x: 0, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: 0.4 }
+      angular: { x: 0, y: 0, z: 3 }
     });
     cmdVel.publish(twist);
   }, 100);
@@ -246,7 +278,7 @@ rgtBtn.addEventListener('mousedown', function() {
   rightInterval = setInterval(function() {
     var twist = new ROSLIB.Message({
       linear: { x: 0, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: -0.4 }
+      angular: { x: 0, y: 0, z: -3 }
     });
     cmdVel.publish(twist);
   }, 100);
@@ -261,14 +293,108 @@ rgtBtn.addEventListener('mouseup', function() {
   cmdVel.publish(twist);
 });
 
-// Event listener for the "Race!" button
-startButton.addEventListener('click', () => {
-  startTimer();  
-});
+// Disble safety features to go full speed
+const { exec } = require('child_process'); // Node.js module to run commands
 
-// Event listener for the "Finish" button
-stopButton.addEventListener('click', () => {
-  stopTimer();
-});
+// Function to disable safety features
+function disableSafetyFeatures(robotName) {
+  const cmd = `ros2 param set /motion_control safety_override full`;  // Command to disable safety features
+
+  exec(cmd, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Error disabling safety features: ${stderr}`);
+      return;
+    }
+    console.log('Safety features disabled:', stdout);  // Log the success
+  });
+}
+
+
+//////// LIGHT ON IROBOT CODE ////////
+
+function setLEDColor(mode) {
+  let color;
+
+  // Log the mode being set
+  console.log("Setting LED color, Mode:", mode);
+
+  if (mode === 1) {
+    // Set LED to blue (static) in manual mode
+    color = {
+      'leds': [
+        { red: 0, green: 0, blue: 255 }, 
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 }
+      ],
+      'override_system': true
+    };
+
+    // Log the LED color being set
+    console.log("Setting LED to blue:", color);
+
+    if (flashingInterval) {
+      clearInterval(flashingInterval);
+      flashingInterval = null;
+    }
+
+    // Publish the blue color
+    ledTopic.publish(new ROSLIB.Message(color));
+
+  } else if (mode === 2) {
+    // Flashing red LEDs in auto mode
+    color = {
+      'leds': [
+        { red: 255, green: 0, blue: 0 }, 
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 }
+      ],
+      'override_system': true
+    };
+
+    // Log the LED color being set
+    console.log("Setting LED to flashing red:", color);
+
+    if (!flashingInterval) {
+      flashingInterval = setInterval(() => {
+        // Toggle the LEDs between off and red every 500ms
+        if (color.leds[0].red === 255) {
+          color.leds = [  // Turn LEDs off
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 }
+          ];
+        } else {
+          color.leds = [  // Turn LEDs on (red)
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 }
+          ];
+        }
+
+        console.log("Flashing LEDs:", color);  // Log every time the LEDs toggle
+        ledTopic.publish(new ROSLIB.Message(color));
+      }, 500); // Flashing interval of 500ms
+    }
+  }
+
+  // Publish the LED color if no flashing is going on
+  if (mode !== 2 && !flashingInterval) {
+    console.log("Publishing LED color:", color);
+    ledTopic.publish(new ROSLIB.Message(color));
+  }
+}
+
 
 
