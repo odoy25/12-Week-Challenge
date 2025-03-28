@@ -366,7 +366,7 @@
                 // Center Follow Function
                 function center_track(left, right, previous_center) {
                     delete previous_center[0];
-                    previous_center.append(right-left);
+                    previous_center.push(right-left);
                     prev = sum(pervious_center)/len(previous_center);
 
                     theta = kp*(right - left) + kd*(prev/0.5);
@@ -381,7 +381,7 @@
                 // Left Wall Follow Function
                 function left_follow(left, previous_left) {
                     delete previous_left[0];
-                    previous_left.append(50-left);
+                    previous_left.push(50-left);
                     prev = sum(pervious_left)/len(previous_left);
 
                     theta = kp_side*(50 - left) + kd_side*(prev/0.5);
@@ -396,7 +396,7 @@
                 // Right Wall Follow Function
                 function right_follow(right, previous_right) {
                     delete previous_right[0];
-                    previous_center.append(right-50);
+                    previous_center.push(right-50);
                     prev = sum(pervious_right)/len(previous_right);
 
                     theta = kp_side*(right - 50) + kd_side*(prev/0.5);
