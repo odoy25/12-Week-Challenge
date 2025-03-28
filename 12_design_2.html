@@ -292,8 +292,8 @@
 
                     timerInterval = setInterval(function () {
                         elapsedTime++;
-                        document.getElementById("timer").textContent = `Time: ${elapsedTime}s`;
-                    }, 1000); // Update every second
+                        document.getElementById("timer").textContent = `Time: ${elapsedTime*0.1}s`;
+                    }, 100); // Update every 0.1 seconds
                 }
 
                 // Function to stop the timer
@@ -367,13 +367,15 @@
                 function center_track(left, right, previous_center) {
                     delete previous_center[0];
                     previous_center.push(right-left);
-                    prev = sum(pervious_center)/len(previous_center);
+                    let sum = previous_center.reduce((a, b) => a+b, 0);
+                    let len = previous_center.length;
+                    let prev = sum/len;
 
                     theta = kp*(right - left) + kd*(prev/0.5);
 
                     let twist = new ROSLIB.Message({
                             linear: { x: speed, y: 0.0, z: 0.0 },
-                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                            angular: { x: 0.0, y: 0.0, z: theta }
                         });
                     drive_pub.publish(twist);
                 }
@@ -382,13 +384,15 @@
                 function left_follow(left, previous_left) {
                     delete previous_left[0];
                     previous_left.push(50-left);
-                    prev = sum(pervious_left)/len(previous_left);
+                    let sum = previous_left.reduce((a, b) => a+b, 0);
+                    let len = previous_left.length;
+                    let prev = sum/len;
 
                     theta = kp_side*(50 - left) + kd_side*(prev/0.5);
 
                     let twist = new ROSLIB.Message({
                             linear: { x: speed, y: 0.0, z: 0.0 },
-                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                            angular: { x: 0.0, y: 0.0, z: theta }
                         });
                     drive_pub.publish(twist);
                 }
@@ -397,13 +401,15 @@
                 function right_follow(right, previous_right) {
                     delete previous_right[0];
                     previous_center.push(right-50);
-                    prev = sum(pervious_right)/len(previous_right);
+                    let sum = previous_right.reduce((a, b) => a+b, 0);
+                    let len = previous_right.length;
+                    let prev = sum/len;
 
                     theta = kp_side*(right - 50) + kd_side*(prev/0.5);
 
                     let twist = new ROSLIB.Message({
                             linear: { x: speed, y: 0.0, z: 0.0 },
-                            angular: { x: 0.0, y: 0.0, z: float(theta) }
+                            angular: { x: 0.0, y: 0.0, z: theta }
                         });
                     drive_pub.publish(twist);
                 }
@@ -426,10 +432,10 @@
                         }
                     }, 100); // run at 10Hz
 
-                    setTimeout(function () {
-                        clearActiveCommand(drive_pub);
-                        stopTimer(); // Stop the timer after 100 seconds
-                    }, 100000); // 100 seconds
+                    //setTimeout(function () {
+                    //    clearActiveCommand(drive_pub);
+                    //    stopTimer(); // Stop the timer after 100 seconds
+                    //}, 1000000); // 1000 seconds
                 });
 
                 // Disconnect button event
