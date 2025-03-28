@@ -364,7 +364,7 @@
                 });
 
                 // Center Follow Function
-                function centerFollow(left, right, previous_center) {
+                function center_track(left, right, previous_center) {
                     delete previous_center[0];
                     previous_center.append(right-left);
                     prev = sum(pervious_center)/len(previous_center);
@@ -379,7 +379,7 @@
                 }
 
                 // Left Wall Follow Function
-                function centerFollow(left, previous_left) {
+                function left_follow(left, previous_left) {
                     delete previous_left[0];
                     previous_left.append(50-left);
                     prev = sum(pervious_left)/len(previous_left);
@@ -394,7 +394,7 @@
                 }
                 
                 // Right Wall Follow Function
-                function centerFollow(right, previous_right) {
+                function right_follow(right, previous_right) {
                     delete previous_right[0];
                     previous_center.append(right-50);
                     prev = sum(pervious_right)/len(previous_right);
