@@ -7,7 +7,7 @@ import math
 ros_node = roslibpy.Ros(host='192.168.8.104', port=9012)
 ros_node.run()
 
-robot_name = 'bravo'
+robot_name = 'omega'
 
 # PD gains       
 kp = 0.005
@@ -81,14 +81,14 @@ def callback_ir(message): #read IR data
 ir_topic.subscribe(callback_ir)
 
 while True: #run wall follow and obstacle avoid algorithm
-    #print(f'Left: {left}, Right: {right}, Front: {front}')   
-    if left > 50 and right > 50:
-        center_track(left, right, previous_center)
-    elif right > 50:
-        right_follow(right, previous_right)
-    elif left > 50:
-        left_follow(left, previous_left)
-    else:
-        center_track(left, right, previous_center)
+    print(f'Left: {left}, Right: {right}')   
+    #if left > 50 and right > 50:
+    #    center_track(left, right, previous_center)
+    #elif right > 50:
+    #    right_follow(right, previous_right)
+    #elif left > 50:
+    #    left_follow(left, previous_left)
+    #else:
+    #    center_track(left, right, previous_center)
 
     time.sleep(0.1)
