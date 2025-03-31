@@ -127,8 +127,8 @@
     let robName = "juliet";
     let intervalId = null;
     let left = 0, right = 0;  // Left and right IR sensor values
-    let previous_center = [100, 75, 50, 25, 0]; //init with average of 50
-    let previous_right = [100, 75, 50, 25, 0];
+    let previous_center = [100, 75, 50, 25, 0]; 
+    let previous_right = [100, 75, 50, 25, 0]; //init with average of 50
     let previous_left = [100, 75, 50, 25, 0];
     var speed = 0.3; // m/s
     var kp = 0.005;
@@ -355,8 +355,8 @@
 
             // Center Follow Function
             function center_track(left, right, previous_center) {
-                delete previous_center[0];
-                previous_center.push(right-left);
+                previous_center.splice(0, 1); // remove first element (oldest value)
+                previous_center.push(right-left); // add new value
                 let sum = previous_center.reduce((a, b) => a+b, 0);
                 let len = previous_center.length;
                 let prev = sum/len;
@@ -372,8 +372,8 @@
 
             // Left Wall Follow Function
             function left_follow(left, previous_left) {
-                delete previous_left[0];
-                previous_left.push(50-left);
+                previous_center.splice(0, 1); // remove first element (oldest value)
+                previous_center.push(50-left); // add new value
                 let sum = previous_left.reduce((a, b) => a+b, 0);
                 let len = previous_left.length;
                 let prev = sum/len;
@@ -389,8 +389,8 @@
             
             // Right Wall Follow Function
             function right_follow(right, previous_right) {
-                delete previous_right[0];
-                previous_center.push(right-50);
+                previous_center.splice(0, 1); // remove first element (oldest value)
+                previous_center.push(right-50); // add new value
                 let sum = previous_right.reduce((a, b) => a+b, 0);
                 let len = previous_right.length;
                 let prev = sum/len;
