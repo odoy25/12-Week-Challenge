@@ -31,7 +31,9 @@ let robPos;
 let irData = [];
 let timerInterval; 
 let timerMilliseconds = 0; 
-let flashingInterval;  // Global flashing interval
+let flashingInterval; 
+let lastPlotTime = 0;
+let lastPosition = { x: 0, y: 0 };
 
 // Function to reset everything
 function resetAll() {
@@ -148,6 +150,20 @@ connBtn.addEventListener('click', function() {
       irTopic.subscribe(function(message) {
         irData = message.readings.map(reading => reading.value);
         drawIRData(irData);
+      });
+
+      // Subscribe to the odometry data for the robot's position
+      robPos.subscribe(function(message) {
+        const x = message.pose.pose.position.x;
+        const y = message.pose.pose.position.y;
+        const theta = message.pose.pose.orientation.z;
+
+        console.log(`Received position: x=${x}, y=${y}, theta=${theta}`);  // Log position for debugging
+
+        resetOdometry();  // Reset odometry
+
+        // Plot the robot position on the mapCanvas
+        plotRobotPosition(x, y, theta);
       });
 
     // Disable safety features when connected
@@ -396,5 +412,61 @@ function setLEDColor(mode) {
   }
 }
 
+//////// MAP CANVAS CODE ////////
+
+// Function to reset the odometry (robot's position)
+function resetOdometry() {
+  lastPosition = { x: 0, y: 0 };  // Reset position to (0, 0)
+  lastPlotTime = 0;  // Reset last plot time to allow immediate plotting
+  console.log("Odometry reset to (0, 0)");
+}
+
+// Function to plot robot's position with rate-limiting
+function plotRobotPosition(x, y, theta) {
+  const currentTime = Date.now();
+
+  // Plot only if enough time has passed (for example, 100 ms)
+  if (currentTime - lastPlotTime < 100) {
+      return;  // Skip if it's too soon to plot
+  }
+
+  // Rate limit passed, so we can plot now
+  lastPlotTime = currentTime;
+
+  // Only plot if the robot has moved significantly (e.g., 0.1 meters)
+  const distanceMoved = Math.sqrt(Math.pow(x - lastPosition.x, 2) + Math.pow(y - lastPosition.y, 2));
+  if (distanceMoved < 0.1) {
+      return;  // Skip if the robot hasn't moved enough
+  }
+
+  // Update last position
+  lastPosition.x = x;
+  lastPosition.y = y;
+
+  // Now proceed with drawing the robot's position on the mapCanvas
+  mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+  // Convert the robot's x, y coordinates to the canvas coordinates
+  const canvasX = (x * 5) + (mapCanvas.width/2);  // Scale and center
+  const canvasY = (y * 5) + (mapCanvas.height)/2;  // Scale and center
+
+  // Draw the robot as a circle
+  mapCtx.beginPath();
+  mapCtx.arc(canvasX, canvasY, 10, 0, 2 * Math.PI);
+  mapCtx.fillStyle = 'red';  // Set robot color
+  mapCtx.fill();
+
+  // Optionally, draw a small line showing the orientation (facing direction)
+  const lineLength = 20;  // Length of the line showing the orientation
+  const lineEndX = canvasX + Math.cos(theta) * lineLength;
+  const lineEndY = canvasY + Math.sin(theta) * lineLength;
+
+  mapCtx.beginPath();
+  mapCtx.moveTo(canvasX, canvasY);
+  mapCtx.lineTo(lineEndX, lineEndY);
+  mapCtx.strokeStyle = 'green';  // Line color for orientation
+  mapCtx.lineWidth = 2;
+  mapCtx.stroke();
+}
 
 
