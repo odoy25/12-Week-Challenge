@@ -60,6 +60,18 @@ function resetAll() {
   connBtn.innerText = "Connect";
 }
 
+// Function to update the arrow direction
+function updateArrowDirection(angularZ) {
+  const arrow = document.getElementById("directionArrow");
+  if (angularZ > 0) {
+      arrow.style.transform = "rotate(-90deg)"; // Left turn
+  } else if (angularZ < 0) {
+      arrow.style.transform = "rotate(90deg)"; // Right turn
+  } else {
+      arrow.style.transform = "rotate(0deg)"; // Forward
+  }
+}
+
 //////// TIMER/RACING BUTTONS CODE ////////
 
 // Function to start the timer
