@@ -312,5 +312,16 @@ connBtn.addEventListener("click", function () {
             connBtn.style.display = 'inline-block';
             disconnectBtn.style.display = 'none';
         });
+        // Function to update the arrow direction
+        function updateArrowDirection(angularZ) {
+            const arrow = document.getElementById("directionArrow");
+            if (angularZ > 0) {
+                arrow.style.transform = "rotate(-90deg)"; // Left turn
+            } else if (angularZ < 0) {
+                arrow.style.transform = "rotate(90deg)"; // Right turn
+            } else {
+                arrow.style.transform = "rotate(0deg)"; // Forward
+            }
+        }
     });
 });
