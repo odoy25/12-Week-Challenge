@@ -267,6 +267,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: 0.4 }  // Rotate left
                 });
                 drive_pub.publish(twist);
+                updateArrowDirection(-1); // Update arrow to forward
             }, 500);
         });
 
@@ -281,6 +282,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: -0.4 }  // Rotate right
                 });
                 drive_pub.publish(twist);
+                updateArrowDirection(1); // Update arrow to forward
             }, 500);
         });
 
@@ -289,6 +291,7 @@ connBtn.addEventListener("click", function () {
             console.log("Stop Button Pressed");
             clearActiveCommand(drive_pub);
             stopTimer(); // Stop the timer
+            updateArrowDirection(0); // Update arrow to forward
         });
 
         // Center Follow Function
@@ -306,6 +309,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: theta }
                 });
             drive_pub.publish(twist);
+            updateArrowDirection(theta); // Update arrow to forward
         }
 
         // Left Wall Follow Function
@@ -323,6 +327,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: theta }
                 });
             drive_pub.publish(twist);
+            updateArrowDirection(theta); // Update arrow to forward
         }
         
         // Right Wall Follow Function
@@ -340,6 +345,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: theta }
                 });
             drive_pub.publish(twist);
+            updateArrowDirection(theta); // Update arrow to forward
         }
 
         // Racetrack logic
@@ -369,5 +375,16 @@ connBtn.addEventListener("click", function () {
             connBtn.style.display = 'inline-block';
             disconnectBtn.style.display = 'none';
         });
+        // Function to update the arrow direction
+        function updateArrowDirection(angularZ) {
+            const arrow = document.getElementById("directionArrow");
+            if (angularZ > 0) {
+                arrow.style.transform = "rotate(-90deg)"; // Left turn
+            } else if (angularZ < 0) {
+                arrow.style.transform = "rotate(90deg)"; // Right turn
+            } else {
+                arrow.style.transform = "rotate(0deg)"; // Forward
+            }
+        }
     });
 });
