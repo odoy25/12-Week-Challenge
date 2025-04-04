@@ -25,6 +25,9 @@ let stopBtn = document.getElementById("stopBtn");
 let disconnectBtn = document.getElementById("disconnectBtn");
 let battVoltage = document.getElementById("battVoltage");
 let centerFollowBtn = document.getElementById("centerFollowBtn");
+let flashingInterval; 
+let lastPlotTime = 0;
+let lastPosition = { x: 0, y: 0 };
 
 nameInput.addEventListener("input", function () {
     robName = nameInput.value.trim() || "juliet"; // Fallback to default
@@ -115,25 +118,82 @@ function drawIRData(irData) {
     ctx.fill();
   }
 
-// Initialize Chart.js for position graph (X vs Y)
-const posCtx = document.getElementById('positionChart').getContext('2d');
-const positionChart = new Chart(posCtx, {
-    type: 'scatter',
-    data: {
-        datasets: [{
-            label: 'Robot Position (X, Y)',
-            data: [],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            pointRadius: 5,
-            fill: false
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: { x: { title: { display: true, text: 'X Position (m)' } }, y: { title: { display: true, text: 'Y Position (m)' } } }
+// // Initialize Chart.js for position graph (X vs Y)
+// const posCtx = document.getElementById('positionChart').getContext('2d');
+// const positionChart = new Chart(posCtx, {
+//     type: 'scatter',
+//     data: {
+//         datasets: [{
+//             label: 'Robot Position (X, Y)',
+//             data: [],
+//             borderColor: 'rgba(75, 192, 192, 1)',
+//             backgroundColor: 'rgba(75, 192, 192, 0.2)',
+//             pointRadius: 5,
+//             fill: false
+//         }]
+//     },
+//     options: {
+//         responsive: true,
+//         scales: { x: { title: { display: true, text: 'X Position (m)' } }, y: { title: { display: true, text: 'Y Position (m)' } } }
+//     }
+// });
+
+
+// Function to reset the odometry (robot's position)
+function resetOdometry() {
+    lastPosition = { x: 0, y: 0 };  // Reset position to (0, 0)
+    lastPlotTime = 0;  // Reset last plot time to allow immediate plotting
+    console.log("Odometry reset to (0, 0)");
+  }
+  
+  // Function to plot robot's position with rate-limiting
+  function plotRobotPosition(x, y, theta) {
+    const currentTime = Date.now();
+  
+    // Plot only if enough time has passed (for example, 100 ms)
+    if (currentTime - lastPlotTime < 100) {
+        return;  // Skip if it's too soon to plot
     }
-});
+  
+    // Rate limit passed, so we can plot now
+    lastPlotTime = currentTime;
+  
+    // Only plot if the robot has moved significantly (e.g., 0.1 meters)
+    const distanceMoved = Math.sqrt(Math.pow(x - lastPosition.x, 2) + Math.pow(y - lastPosition.y, 2));
+    if (distanceMoved < 0.1) {
+        return;  // Skip if the robot hasn't moved enough
+    }
+  
+    // Update last position
+    lastPosition.x = x;
+    lastPosition.y = y;
+  
+    // Now proceed with drawing the robot's position on the mapCanvas
+    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+  
+    // Convert the robot's x, y coordinates to the canvas coordinates
+    const canvasX = (x * 5) + (mapCanvas.width/2);  // Scale and center
+    const canvasY = (y * 5) + (mapCanvas.height)/2;  // Scale and center
+  
+    // Draw the robot as a circle
+    mapCtx.beginPath();
+    mapCtx.arc(canvasX, canvasY, 10, 0, 2 * Math.PI);
+    mapCtx.fillStyle = 'red';  // Set robot color
+    mapCtx.fill();
+  
+    // Optionally, draw a small line showing the orientation (facing direction)
+    const lineLength = 20;  // Length of the line showing the orientation
+    const lineEndX = canvasX + Math.cos(theta) * lineLength;
+    const lineEndY = canvasY + Math.sin(theta) * lineLength;
+  
+    mapCtx.beginPath();
+    mapCtx.moveTo(canvasX, canvasY);
+    mapCtx.lineTo(lineEndX, lineEndY);
+    mapCtx.strokeStyle = 'green';  // Line color for orientation
+    mapCtx.lineWidth = 2;
+    mapCtx.stroke();
+  }
+  
 
 // When the connect button is clicked
 connBtn.addEventListener("click", function () {
