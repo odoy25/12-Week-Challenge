@@ -1,4 +1,3 @@
-
 console.clear();
 console.log("Made it here");
 
@@ -31,32 +30,90 @@ nameInput.addEventListener("input", function () {
     robName = nameInput.value.trim() || "juliet"; // Fallback to default
 });
 
-// Initialize Chart.js for IR sensor graph
-const ctx = document.getElementById('irChart').getContext('2d');
-const irChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: ['IR1', 'IR2', 'IR3', 'IR4', 'IR5', 'IR6', 'IR7'],
-        datasets: [{
-            label: 'IR Sensor Values',
-            data: [0, 0, 0, 0, 0, 0, 0],
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { position: 'top' },
-            tooltip: { enabled: true }
-        },
-        scales: {
-            x: { beginAtZero: true, max: 4500 },
-            y: { beginAtZero: true, max: 4500 }
-        }
-    }
-});
+// // Initialize Chart.js for IR sensor graph
+// const ctx = document.getElementById('irChart').getContext('2d');
+// const irChart = new Chart(ctx, {
+//     type: 'bar',
+//     data: {
+//         labels: ['IR1', 'IR2', 'IR3', 'IR4', 'IR5', 'IR6', 'IR7'],
+//         datasets: [{
+//             label: 'IR Sensor Values',
+//             data: [0, 0, 0, 0, 0, 0, 0],
+//             backgroundColor: 'rgba(54, 162, 235, 0.6)',
+//             borderColor: 'rgba(54, 162, 235, 1)',
+//             borderWidth: 1
+//         }]
+//     },
+//     options: {
+//         responsive: true,
+//         plugins: {
+//             legend: { position: 'top' },
+//             tooltip: { enabled: true }
+//         },
+//         scales: {
+//             x: { beginAtZero: true, max: 4500 },
+//             y: { beginAtZero: true, max: 4500 }
+//         }
+//     }
+// });
+
+// Function to draw IR sensor data on the canvas
+function drawIRData(irData) {
+    ctx.clearRect(0, 0, sensorCanvas.width, sensorCanvas.height); // Clear canvas
+  
+    const centerX = sensorCanvas.width / 2;
+    const centerY = sensorCanvas.height / 2;
+    const robotRadius = Math.min(centerX, centerY) * 0.8; // Robot's body size
+    const numSensors = irData.length;
+  
+    // Sensors only on the **front half** (180-degree spread)
+    const angleStep = Math.PI / (numSensors - 1); // Divide front arc into equal angles
+    const startAngle = -Math.PI / 2; // Start from the front center
+  
+    // Draw the robot body
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, robotRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "#333"; // Robot color
+    ctx.fill();
+    
+    // Draw sensors along the front arc
+    irData.forEach((value, index) => {
+      const angle = startAngle + index * angleStep; // Position each sensor in the front arc
+      const sensorX = centerX + robotRadius * Math.cos(angle);
+      const sensorY = centerY + robotRadius * Math.sin(angle);
+  
+      // Normalize intensity (assuming 0-100 range)
+      const intensity = Math.min(value / 100, 1);
+      
+      // Color gradient: Low (blue) → High (red)
+      const red = Math.floor(intensity * 255);
+      const blue = Math.floor((1 - intensity) * 255);
+      const color = `rgb(${red}, 0, ${blue})`;
+  
+      // Sensor size based on intensity
+      const sensorSize = 8 + intensity * 15; // Min 8px, max ~23px
+  
+      // Draw sensor as a filled circle
+      ctx.beginPath();
+      ctx.arc(sensorX, sensorY, sensorSize, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      
+      // Optional: Add a glow effect
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(sensorX, sensorY, sensorSize * 1.5, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+  
+    // Draw a small reference dot at the robot center
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = "#FFF";
+    ctx.fill();
+  }
 
 // Initialize Chart.js for position graph (X vs Y)
 const posCtx = document.getElementById('positionChart').getContext('2d');
