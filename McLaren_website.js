@@ -17,15 +17,14 @@ var kd = 0.005;
 var kp_side = 0.002;
 var kd_side = 0.002;
 
-let connBtn = document.getElementById("connBtn");
+let connBtn = document.getElementById("connectButton");
 let nameInput = document.getElementById("nameInput");
-let fwdBtn = document.getElementById("fwdBtn");
-let leftBtn = document.getElementById("leftBtn");
-let rightBtn = document.getElementById("rightBtn");
-let stopBtn = document.getElementById("stopBtn");
-let disconnectBtn = document.getElementById("disconnectBtn");
-let battVoltage = document.getElementById("battVoltage");
-let centerFollowBtn = document.getElementById("centerFollowBtn");
+let fwdBtn = document.getElementById("UpButton");
+let leftBtn = document.getElementById("LeftButton");
+let rightBtn = document.getElementById("RightButton");
+let stopBtn = document.getElementById("stopButtin");
+let battVoltage = document.getElementById("batteryDisplay");
+let centerFollowBtn = document.getElementById("startButton");
 
 nameInput.addEventListener("input", function () {
     robName = nameInput.value.trim() || "juliet"; // Fallback to default
@@ -88,8 +87,6 @@ connBtn.addEventListener("click", function () {
         console.log('Connected to websocket server.');
         document.getElementById('status').textContent = 'Connected';
         document.getElementById('status').style.color = 'green';
-        connBtn.style.display = 'none';
-        disconnectBtn.style.display = 'inline-block';
 
         // Initialize drive_pub for publishing velocity commands
         let drive_pub = new ROSLIB.Topic({
@@ -302,15 +299,6 @@ connBtn.addEventListener("click", function () {
                     center_track(left, right, previous_center);
                 }
             }, 100); // run at 10Hz
-        });
-
-        // Disconnect button event
-        disconnectBtn.addEventListener("click", function () {
-            ros.close();
-            document.getElementById('status').textContent = 'Disconnected';
-            document.getElementById('status').style.color = 'red';
-            connBtn.style.display = 'inline-block';
-            disconnectBtn.style.display = 'none';
         });
     });
 });
