@@ -115,7 +115,7 @@ function drawIRData(irData) {
   }
 
 // Initialize Chart.js for position graph (X vs Y)
-const posCtx = document.getElementById('positionChart').getContext('2d');
+const posCtx = document.getElementById('mapCanvas').getContext('2d');
 const positionChart = new Chart(posCtx, {
     type: 'scatter',
     data: {
