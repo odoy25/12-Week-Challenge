@@ -1,6 +1,7 @@
 console.clear();
 console.log("Made it here");
 
+//iniitalize variables
 const ip = "192.168.8.104";
 const port = "9012";
 let x = 0, y = 0;
@@ -16,45 +17,32 @@ var kd = 0.005;
 var kp_side = 0.002;
 var kd_side = 0.002;
 
+// initialize objects
 let connBtn = document.getElementById("connectButton");
 let nameInput = document.getElementById("nameInput");
 let fwdBtn = document.getElementById("UpButton");
 let leftBtn = document.getElementById("LeftButton");
 let rightBtn = document.getElementById("RightButton");
-let stopBtn = document.getElementById("stopButtin");
+let stopBtn = document.getElementById("stopButton");
 let battVoltage = document.getElementById("batteryDisplay");
 let centerFollowBtn = document.getElementById("startButton");
+let modeText = document.getElementById("modeDisplay");
+let timerInterval; 
+let timerMilliseconds = 0; 
+let flashingInterval; 
+let lastPlotTime = 0;
+let lastPosition = { x: 0, y: 0 };
+
+var mode = 1; // 1 for manual, 2 for auto
+
+const senserCanvas = document.getElementById("sensorCanvas");
+const ctx = sensorCanvas.getContext("2d");
+const mapCanvas = document.getElementById("mapCanvas");
+const mapCtx = mapCanvas.getContext("2d");
 
 nameInput.addEventListener("input", function () {
     robName = nameInput.value.trim() || "juliet"; // Fallback to default
 });
-
-// // Initialize Chart.js for IR sensor graph
-// const ctx = document.getElementById('irChart').getContext('2d');
-// const irChart = new Chart(ctx, {
-//     type: 'bar',
-//     data: {
-//         labels: ['IR1', 'IR2', 'IR3', 'IR4', 'IR5', 'IR6', 'IR7'],
-//         datasets: [{
-//             label: 'IR Sensor Values',
-//             data: [0, 0, 0, 0, 0, 0, 0],
-//             backgroundColor: 'rgba(54, 162, 235, 0.6)',
-//             borderColor: 'rgba(54, 162, 235, 1)',
-//             borderWidth: 1
-//         }]
-//     },
-//     options: {
-//         responsive: true,
-//         plugins: {
-//             legend: { position: 'top' },
-//             tooltip: { enabled: true }
-//         },
-//         scales: {
-//             x: { beginAtZero: true, max: 4500 },
-//             y: { beginAtZero: true, max: 4500 }
-//         }
-//     }
-// });
 
 // Function to draw IR sensor data on the canvas
 function drawIRData(irData) {
@@ -114,25 +102,228 @@ function drawIRData(irData) {
     ctx.fill();
   }
 
-// Initialize Chart.js for position graph (X vs Y)
-const posCtx = document.getElementById('positionChart').getContext('2d');
-const positionChart = new Chart(posCtx, {
-    type: 'scatter',
-    data: {
-        datasets: [{
-            label: 'Robot Position (X, Y)',
-            data: [],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            pointRadius: 5,
-            fill: false
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: { x: { title: { display: true, text: 'X Position (m)' } }, y: { title: { display: true, text: 'Y Position (m)' } } }
+// Function to reset the odometry (robot's position)
+function resetOdometry() {
+    lastPosition = { x: 0, y: 0 };  // Reset position to (0, 0)
+    lastPlotTime = 0;  // Reset last plot time to allow immediate plotting
+    console.log("Odometry reset to (0, 0)");
+  }
+  
+  // Function to plot robot's position with rate-limiting
+  function plotRobotPosition(x, y, theta) {
+    const currentTime = Date.now();
+  
+    // Plot only if enough time has passed (for example, 100 ms)
+    if (currentTime - lastPlotTime < 100) {
+        return;  // Skip if it's too soon to plot
     }
-});
+  
+    // Rate limit passed, so we can plot now
+    lastPlotTime = currentTime;
+  
+    // Only plot if the robot has moved significantly (e.g., 0.1 meters)
+    const distanceMoved = Math.sqrt(Math.pow(x - lastPosition.x, 2) + Math.pow(y - lastPosition.y, 2));
+    if (distanceMoved < 0.1) {
+        return;  // Skip if the robot hasn't moved enough
+    }
+  
+    // Update last position
+    lastPosition.x = x;
+    lastPosition.y = y;
+  
+    // Now proceed with drawing the robot's position on the mapCanvas
+    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+  
+    // Convert the robot's x, y coordinates to the canvas coordinates
+    const canvasX = (x * 5) + (mapCanvas.width/2);  // Scale and center
+    const canvasY = (y * 5) + (mapCanvas.height)/2;  // Scale and center
+  
+    // Draw the robot as a circle
+    mapCtx.beginPath();
+    mapCtx.arc(canvasX, canvasY, 10, 0, 2 * Math.PI);
+    mapCtx.fillStyle = 'red';  // Set robot color
+    mapCtx.fill();
+  
+    // Optionally, draw a small line showing the orientation (facing direction)
+    const lineLength = 20;  // Length of the line showing the orientation
+    const lineEndX = canvasX + Math.cos(theta) * lineLength;
+    const lineEndY = canvasY + Math.sin(theta) * lineLength;
+  
+    mapCtx.beginPath();
+    mapCtx.moveTo(canvasX, canvasY);
+    mapCtx.lineTo(lineEndX, lineEndY);
+    mapCtx.strokeStyle = 'green';  // Line color for orientation
+    mapCtx.lineWidth = 2;
+    mapCtx.stroke();
+  }
+
+  function setLEDColor(mode) {
+  let color;
+
+  // Log the mode being set
+  console.log("Setting LED color, Mode:", mode);
+
+  if (mode === 1) {
+    // Set LED to blue (static) in manual mode
+    color = {
+      'leds': [
+        { red: 0, green: 0, blue: 255 }, 
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 },
+        { red: 0, green: 0, blue: 255 }
+      ],
+      'override_system': true
+    };
+
+    // Log the LED color being set
+    console.log("Setting LED to blue:", color);
+
+    if (flashingInterval) {
+      clearInterval(flashingInterval);
+      flashingInterval = null;
+    }
+
+    // Publish the blue color
+    ledTopic.publish(new ROSLIB.Message(color));
+
+  } else if (mode === 2) {
+    // Flashing red LEDs in auto mode
+    color = {
+      'leds': [
+        { red: 255, green: 0, blue: 0 }, 
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 },
+        { red: 255, green: 0, blue: 0 }
+      ],
+      'override_system': true
+    };
+
+    // Log the LED color being set
+    console.log("Setting LED to flashing red:", color);
+
+    if (!flashingInterval) {
+      flashingInterval = setInterval(() => {
+        // Toggle the LEDs between off and red every 500ms
+        if (color.leds[0].red === 255) {
+          color.leds = [  // Turn LEDs off
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 },
+            { red: 0, green: 0, blue: 0 }
+          ];
+        } else {
+          color.leds = [  // Turn LEDs on (red)
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 },
+            { red: 255, green: 0, blue: 0 }
+          ];
+        }
+
+        console.log("Flashing LEDs:", color);  // Log every time the LEDs toggle
+        ledTopic.publish(new ROSLIB.Message(color));
+      }, 500); // Flashing interval of 500ms
+    }
+  }
+
+  // Publish the LED color if no flashing is going on
+  if (mode !== 2 && !flashingInterval) {
+    console.log("Publishing LED color:", color);
+    ledTopic.publish(new ROSLIB.Message(color));
+  }
+}
+
+function setLEDColor(mode) {
+    let color;
+  
+    // Log the mode being set
+    console.log("Setting LED color, Mode:", mode);
+  
+    if (mode === 1) {
+      // Set LED to blue (static) in manual mode
+      color = {
+        'leds': [
+          { red: 0, green: 0, blue: 255 }, 
+          { red: 0, green: 0, blue: 255 },
+          { red: 0, green: 0, blue: 255 },
+          { red: 0, green: 0, blue: 255 },
+          { red: 0, green: 0, blue: 255 },
+          { red: 0, green: 0, blue: 255 }
+        ],
+        'override_system': true
+      };
+  
+      // Log the LED color being set
+      console.log("Setting LED to blue:", color);
+  
+      if (flashingInterval) {
+        clearInterval(flashingInterval);
+        flashingInterval = null;
+      }
+  
+      // Publish the blue color
+      ledTopic.publish(new ROSLIB.Message(color));
+  
+    } else if (mode === 2) {
+      // Flashing red LEDs in auto mode
+      color = {
+        'leds': [
+          { red: 255, green: 0, blue: 0 }, 
+          { red: 255, green: 0, blue: 0 },
+          { red: 255, green: 0, blue: 0 },
+          { red: 255, green: 0, blue: 0 },
+          { red: 255, green: 0, blue: 0 },
+          { red: 255, green: 0, blue: 0 }
+        ],
+        'override_system': true
+      };
+  
+      // Log the LED color being set
+      console.log("Setting LED to flashing red:", color);
+  
+      if (!flashingInterval) {
+        flashingInterval = setInterval(() => {
+          // Toggle the LEDs between off and red every 500ms
+          if (color.leds[0].red === 255) {
+            color.leds = [  // Turn LEDs off
+              { red: 0, green: 0, blue: 0 },
+              { red: 0, green: 0, blue: 0 },
+              { red: 0, green: 0, blue: 0 },
+              { red: 0, green: 0, blue: 0 },
+              { red: 0, green: 0, blue: 0 },
+              { red: 0, green: 0, blue: 0 }
+            ];
+          } else {
+            color.leds = [  // Turn LEDs on (red)
+              { red: 255, green: 0, blue: 0 },
+              { red: 255, green: 0, blue: 0 },
+              { red: 255, green: 0, blue: 0 },
+              { red: 255, green: 0, blue: 0 },
+              { red: 255, green: 0, blue: 0 },
+              { red: 255, green: 0, blue: 0 }
+            ];
+          }
+  
+          console.log("Flashing LEDs:", color);  // Log every time the LEDs toggle
+          ledTopic.publish(new ROSLIB.Message(color));
+        }, 500); // Flashing interval of 500ms
+      }
+    }
+  
+    // Publish the LED color if no flashing is going on
+    if (mode !== 2 && !flashingInterval) {
+      console.log("Publishing LED color:", color);
+      ledTopic.publish(new ROSLIB.Message(color));
+    }
+  }
 
 // When the connect button is clicked
 connBtn.addEventListener("click", function () {
@@ -164,6 +355,13 @@ connBtn.addEventListener("click", function () {
             battVoltage.innerText = btP.toFixed(1);
         });
 
+              // Setup LED topic
+        ledTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: `/${robName}/cmd_lightring`,
+            messageType: 'irobot_create_msgs/LightringLeds'
+        });
+
         // Subscribe to IR sensor data
         let irTopic = new ROSLIB.Topic({
             ros: ros,
@@ -172,12 +370,13 @@ connBtn.addEventListener("click", function () {
         });
 
         irTopic.subscribe(function (message) {
-            let values = message.readings.map(reading => reading.value);
-            irChart.data.datasets[0].data = values; // Update IR chart data
-            irChart.update(); // Refresh the chart
+            let irData = message.readings.map(reading => reading.value);
+            drawIRData(irData);
+            // irChart.data.datasets[0].data = values; // Update IR chart data
+            // irChart.update(); // Refresh the chart
 
-            let left1 = values[0], left2 = values[1], left3 = values[2];
-            let right1 = values[6], right2 = values[5], right3 = values[4];
+            let left1 = irData[0], left2 = irData[1], left3 = irData[2];
+            let right1 = irData[6], right2 = irData[5], right3 = irData[4];
             left = (0.5*left1 + left2 + 1.5*left3) / 3;
             right = (0.5*right1 + right2 + 1.5*right3) / 3;
         });
@@ -187,19 +386,6 @@ connBtn.addEventListener("click", function () {
             ros: ros,
             name: `/${robName}/odom`,
             messageType: 'nav_msgs/Odometry'
-        });
-
-        odomTopic.subscribe(function (message) {
-            x = message.pose.pose.position.x;
-            y = message.pose.pose.position.y;
-
-            // Update position display
-            document.getElementById('posX').textContent = `X: ${x.toFixed(2)}`;
-            document.getElementById('posY').textContent = `Y: ${y.toFixed(2)}`;
-
-            // Add new data point to position chart
-            //positionChart.data.datasets[0].data.push({ x: x, y: y });
-            //positionChart.update(); // Refresh the chart
         });
 
         let intervalId = null; // Shared intervalId to manage active commands
@@ -250,6 +436,7 @@ connBtn.addEventListener("click", function () {
                     angular: { x: 0.0, y: 0.0, z: 0.0 }  // No rotation
                 });
                 drive_pub.publish(twist);
+                updateArrowDirection(0); // Update arrow to forward
             }, 500);
         });
 
@@ -288,6 +475,9 @@ connBtn.addEventListener("click", function () {
             console.log("Stop Button Pressed");
             clearActiveCommand(drive_pub);
             stopTimer(); // Stop the timer
+            mode = 1; // Set mode to manual
+            setLEDColor(mode); // Set LED color to blue
+            modeText.innerText = "Mode: Manual";
             updateArrowDirection(0); // Update arrow to forward
         });
 
@@ -350,6 +540,9 @@ connBtn.addEventListener("click", function () {
             console.log("Race Button Pressed");
             clearActiveCommand(drive_pub);
             startTimer(); // Start the timer
+            mode = 2; // Set mode to auto
+            modeText.innerText = "Mode: Auto";
+            setLEDColor(mode); // Set LED color to red
 
             intervalId = setInterval(function () {
                 if (left > 50 && right > 50) {
@@ -364,21 +557,12 @@ connBtn.addEventListener("click", function () {
             }, 100); // run at 10Hz
         });
 
-        // Disconnect button event
-        disconnectBtn.addEventListener("click", function () {
-            ros.close();
-            document.getElementById('status').textContent = 'Disconnected';
-            document.getElementById('status').style.color = 'red';
-            connBtn.style.display = 'inline-block';
-            disconnectBtn.style.display = 'none';
-        });
-        // Function to update the arrow direction
         function updateArrowDirection(angularZ) {
             const arrow = document.getElementById("directionArrow");
             if (angularZ > 0) {
-                arrow.style.transform = "rotate(-90deg)"; // Left turn
+                arrow.style.transform = "rotate(90deg)"; // Left turn
             } else if (angularZ < 0) {
-                arrow.style.transform = "rotate(90deg)"; // Right turn
+                arrow.style.transform = "rotate(-90deg)"; // Right turn
             } else {
                 arrow.style.transform = "rotate(0deg)"; // Forward
             }
